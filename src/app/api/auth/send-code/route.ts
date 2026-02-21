@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   }
 
   const code = generateCode();
-  await storeCode(email, code);
+  const verifyToken = await storeCode(email, code);
 
   const resendKey = process.env.RESEND_API_KEY;
   if (resendKey) {
@@ -53,5 +53,14 @@ export async function POST(request: Request) {
     console.log(`[GATE] Code for ${email}: ${code}`);
   }
 
-  return NextResponse.json({ ok: true });
+  const response = NextResponse.json({ ok: true });
+  response.cookies.set("da_verify_token", verifyToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 600, // 10 minutes
+  });
+
+  return response;
 }

@@ -14,7 +14,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid code" }, { status: 401 });
   }
 
-  if (!(await verifyCode(email, code))) {
+  // Get verify token from cookie
+  const cookies = request.headers.get('cookie') || '';
+  const verifyToken = cookies
+    .split(';')
+    .find(c => c.trim().startsWith('da_verify_token='))
+    ?.split('=')[1];
+
+  if (!(await verifyCode(email, code, verifyToken))) {
     return NextResponse.json({ error: "Invalid or expired code" }, { status: 401 });
   }
 
@@ -28,6 +35,9 @@ export async function POST(request: Request) {
     path: "/",
     maxAge: 7 * 24 * 60 * 60, // 7 days
   });
+
+  // Clear the verify token
+  response.cookies.delete("da_verify_token");
 
   return response;
 }
