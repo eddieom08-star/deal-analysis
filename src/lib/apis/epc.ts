@@ -50,6 +50,7 @@ export async function searchByPostcode(
       Authorization: getAuthHeader(),
       Accept: "application/json",
     },
+    signal: AbortSignal.timeout(15000), // 15-second timeout
   });
 
   if (!response.ok) {
@@ -60,7 +61,13 @@ export async function searchByPostcode(
     throw new Error(`EPC API returned ${response.status}`);
   }
 
-  const data: EPCApiResponse = await response.json();
+  let data: EPCApiResponse;
+  try {
+    data = await response.json();
+  } catch (error) {
+    throw new Error(`Failed to parse JSON from EPC API: ${error instanceof Error ? error.message : 'Unknown'}`);
+  }
+
   return (data.rows || []).map(parseEpcRow);
 }
 
@@ -79,6 +86,7 @@ export async function searchByAddress(
       Authorization: getAuthHeader(),
       Accept: "application/json",
     },
+    signal: AbortSignal.timeout(15000), // 15-second timeout
   });
 
   if (!response.ok) {
@@ -86,7 +94,13 @@ export async function searchByAddress(
     throw new Error(`EPC API returned ${response.status}`);
   }
 
-  const data: EPCApiResponse = await response.json();
+  let data: EPCApiResponse;
+  try {
+    data = await response.json();
+  } catch (error) {
+    throw new Error(`Failed to parse JSON from EPC API: ${error instanceof Error ? error.message : 'Unknown'}`);
+  }
+
   return (data.rows || []).map(parseEpcRow);
 }
 

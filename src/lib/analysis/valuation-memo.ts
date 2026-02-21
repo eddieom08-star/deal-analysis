@@ -185,9 +185,15 @@ export async function generateValuationMemo(
   try {
     return JSON.parse(json) as ValuationMemoData;
   } catch (firstError) {
-    const retryPrompt = `${userPrompt}\n\nPREVIOUS ATTEMPT FAILED TO PARSE. Error: ${firstError}. The response must be valid JSON only. Start with { and end with }.`;
-    response = await callClaude(SYSTEM_PROMPT, retryPrompt, 10000);
-    json = extractJson(response);
-    return JSON.parse(json) as ValuationMemoData;
+    try {
+      const retryPrompt = `${userPrompt}\n\nPREVIOUS ATTEMPT FAILED TO PARSE. Error: ${firstError}. The response must be valid JSON only. Start with { and end with }.`;
+      response = await callClaude(SYSTEM_PROMPT, retryPrompt, 10000);
+      json = extractJson(response);
+      return JSON.parse(json) as ValuationMemoData;
+    } catch (retryError) {
+      throw new Error(
+        `Claude JSON parse failed after retry: ${retryError instanceof Error ? retryError.message : 'Unknown'}`,
+      );
+    }
   }
 }

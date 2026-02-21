@@ -27,6 +27,7 @@ async function fetchPropertyData<T>(
 
   const response = await fetch(url.toString(), {
     headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(15000), // 15-second timeout
   });
 
   if (!response.ok) {
@@ -36,7 +37,12 @@ async function fetchPropertyData<T>(
     );
   }
 
-  const data = await response.json();
+  let data: any;
+  try {
+    data = await response.json();
+  } catch (error) {
+    throw new Error(`Failed to parse JSON from PropertyData API: ${error instanceof Error ? error.message : 'Unknown'}`);
+  }
 
   if (data.status === "error") {
     throw new Error(

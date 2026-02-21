@@ -202,9 +202,15 @@ export async function generateInvestmentMemo(
     return JSON.parse(json) as InvestmentMemoData;
   } catch (firstError) {
     // Retry with error feedback
-    const retryPrompt = `${userPrompt}\n\nPREVIOUS ATTEMPT FAILED TO PARSE. Error: ${firstError}. The response must be valid JSON only, no markdown wrapping. Start with { and end with }.`;
-    response = await callClaude(SYSTEM_PROMPT, retryPrompt, 12000);
-    json = extractJson(response);
-    return JSON.parse(json) as InvestmentMemoData;
+    try {
+      const retryPrompt = `${userPrompt}\n\nPREVIOUS ATTEMPT FAILED TO PARSE. Error: ${firstError}. The response must be valid JSON only, no markdown wrapping. Start with { and end with }.`;
+      response = await callClaude(SYSTEM_PROMPT, retryPrompt, 12000);
+      json = extractJson(response);
+      return JSON.parse(json) as InvestmentMemoData;
+    } catch (retryError) {
+      throw new Error(
+        `Claude JSON parse failed after retry: ${retryError instanceof Error ? retryError.message : 'Unknown'}`,
+      );
+    }
   }
 }

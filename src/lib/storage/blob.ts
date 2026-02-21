@@ -62,7 +62,7 @@ export async function uploadPDF(
   street: string,
   postcode: string,
   type: "investment-memo" | "valuation-memo",
-  buffer: Buffer,
+  buffer: Buffer | Uint8Array,
 ): Promise<string> {
   const folder = `${slugify(street)}-${slugify(postcode)}`;
   const path = `pdfs/${folder}/${analysisId}-${type}.pdf`;

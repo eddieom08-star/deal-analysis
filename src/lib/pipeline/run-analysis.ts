@@ -19,6 +19,19 @@ function updateStatus(analysis: AnalysisRecord, status: AnalysisStatus): Analysi
   return { ...analysis, status, updatedAt: new Date().toISOString() };
 }
 
+function validateSufficientData(comparables: ComparableEvidence): void {
+  const hasPropertyData =
+    comparables.propertyData.soldPrices !== null || comparables.propertyData.soldPricesPerSqft !== null;
+  const hasEnrichedComps = comparables.enrichedComparables.length >= 3;
+
+  if (!hasPropertyData && !hasEnrichedComps) {
+    throw new Error(
+      "INSUFFICIENT_DATA: Need either PropertyData API responses or 3+ enriched comparables. " +
+        "All external APIs may have failed.",
+    );
+  }
+}
+
 export async function runAnalysisPipeline(analysis: AnalysisRecord): Promise<void> {
   try {
     // Step 1: Scrape Rightmove
@@ -96,6 +109,9 @@ export async function runAnalysisPipeline(analysis: AnalysisRecord): Promise<voi
     analysis.comparables = comparables;
     await saveAnalysis(analysis);
 
+    // Validate sufficient data before Claude analysis
+    validateSufficientData(comparables);
+
     // Step 4: Claude - Investment Memo
     analysis = updateStatus(analysis, AnalysisStatus.ANALYZING_INVESTMENT);
     await saveAnalysis(analysis);
@@ -116,11 +132,12 @@ export async function runAnalysisPipeline(analysis: AnalysisRecord): Promise<voi
     analysis = updateStatus(analysis, AnalysisStatus.GENERATING_PDFS);
     await saveAnalysis(analysis);
 
-    const investmentPdfBuffer = Buffer.from(
-      await renderToBuffer(React.createElement(InvestmentMemoPDF, { data: investmentMemo }) as any),
+    // renderToBuffer returns Uint8Array, which is compatible with Vercel Blob
+    const investmentPdfBuffer = await renderToBuffer(
+      React.createElement(InvestmentMemoPDF, { data: investmentMemo }) as any
     );
-    const valuationPdfBuffer = Buffer.from(
-      await renderToBuffer(React.createElement(ValuationMemoPDF, { data: valuationMemo }) as any),
+    const valuationPdfBuffer = await renderToBuffer(
+      React.createElement(ValuationMemoPDF, { data: valuationMemo }) as any
     );
 
     // Step 7: Upload to Blob

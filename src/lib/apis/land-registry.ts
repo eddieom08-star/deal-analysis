@@ -64,6 +64,7 @@ export async function getTransactionsByPostcode(
 
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(15000), // 15-second timeout
   });
 
   if (!response.ok) {
@@ -71,7 +72,13 @@ export async function getTransactionsByPostcode(
     throw new Error(`Land Registry API returned ${response.status}`);
   }
 
-  const data: LRJsonLdResult = await response.json();
+  let data: LRJsonLdResult;
+  try {
+    data = await response.json();
+  } catch (error) {
+    throw new Error(`Failed to parse JSON from Land Registry API: ${error instanceof Error ? error.message : 'Unknown'}`);
+  }
+
   const items = data?.result?.items || [];
 
   let transactions = items.map(parseTransaction);
