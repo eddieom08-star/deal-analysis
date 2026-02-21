@@ -67,7 +67,10 @@ export async function uploadPDF(
   const folder = `${slugify(street)}-${slugify(postcode)}`;
   const path = `pdfs/${folder}/${analysisId}-${type}.pdf`;
 
-  const blob = await put(path, buffer, {
+  // Convert Uint8Array to Buffer if needed for Vercel Blob compatibility
+  const bufferData = buffer instanceof Buffer ? buffer : Buffer.from(buffer);
+
+  const blob = await put(path, bufferData, {
     access: "public",
     contentType: "application/pdf",
     addRandomSuffix: false,
