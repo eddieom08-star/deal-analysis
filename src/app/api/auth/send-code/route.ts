@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   }
 
   const code = generateCode();
-  storeCode(email, code);
+  await storeCode(email, code);
 
   const resendKey = process.env.RESEND_API_KEY;
   if (resendKey) {
