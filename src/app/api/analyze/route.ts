@@ -48,7 +48,15 @@ export async function POST(request: Request) {
     error: null,
   };
 
-  await saveAnalysis(analysis);
+  try {
+    await saveAnalysis(analysis);
+  } catch (error) {
+    console.error("Failed to save analysis:", error);
+    return NextResponse.json(
+      { error: "Failed to save analysis. Please try again." },
+      { status: 500 }
+    );
+  }
 
   after(async () => {
     await runAnalysisPipeline(analysis);
