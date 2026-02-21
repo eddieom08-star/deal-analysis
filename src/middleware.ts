@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { jwtVerify, createRemoteJWKSet } from "jose";
+import { jwtVerify } from "jose";
 
-const TEAM_DOMAIN = process.env.CLOUDFLARE_TEAM_DOMAIN;
+const COOKIE_NAME = "da_session";
+
+function getSecret(): Uint8Array {
+  const secret = process.env.GATE_SECRET || process.env.ANTHROPIC_API_KEY || "fallback-dev-secret";
+  return new TextEncoder().encode(secret);
+}
 
 export async function middleware(request: NextRequest) {
   // Skip auth in development
@@ -10,36 +15,24 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Skip if no team domain configured
-  if (!TEAM_DOMAIN) {
-    return NextResponse.next();
-  }
-
-  const token =
-    request.cookies.get("CF_Authorization")?.value ||
-    request.headers.get("Cf-Access-Jwt-Assertion");
+  const token = request.cookies.get(COOKIE_NAME)?.value;
 
   if (!token) {
-    return new NextResponse("Unauthorized", { status: 401 });
+    return NextResponse.redirect(new URL("/gate", request.url));
   }
 
   try {
-    const JWKS = createRemoteJWKSet(
-      new URL(`https://${TEAM_DOMAIN}/cdn-cgi/access/certs`),
-    );
-
-    await jwtVerify(token, JWKS, {
-      issuer: `https://${TEAM_DOMAIN}`,
-    });
-
+    await jwtVerify(token, getSecret());
     return NextResponse.next();
   } catch {
-    return new NextResponse("Invalid token", { status: 403 });
+    const response = NextResponse.redirect(new URL("/gate", request.url));
+    response.cookies.set(COOKIE_NAME, "", { maxAge: 0, path: "/" });
+    return response;
   }
 }
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    "/((?!_next/static|_next/image|favicon.ico|gate|api/auth).*)",
   ],
 };
