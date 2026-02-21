@@ -1,0 +1,9 @@
+# Test coverage
+coverage/
+*.lcov
+
+# Test cache
+.jest-cache/
+
+# Test output
+test-results/
