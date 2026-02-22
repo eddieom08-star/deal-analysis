@@ -1,4 +1,4 @@
-import { put, list, head, get } from "@vercel/blob";
+import { put, list, head, get, del } from "@vercel/blob";
 import type { AnalysisRecord } from "@/lib/types";
 
 function slugify(text: string): string {
@@ -93,6 +93,23 @@ export async function listAnalyses(): Promise<AnalysisRecord[]> {
   return analyses.sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
+}
+
+export async function deleteAnalysis(id: string): Promise<void> {
+  const analysis = await getAnalysis(id);
+  if (!analysis) {
+    throw new Error("Analysis not found");
+  }
+
+  const pathsToDelete: string[] = [`analyses/${id}.json`];
+
+  if (analysis.listing?.address.street && analysis.listing?.address.postcode) {
+    const folder = `${slugify(analysis.listing.address.street)}-${slugify(analysis.listing.address.postcode)}`;
+    pathsToDelete.push(`pdfs/${folder}/${id}-investment-memo.pdf`);
+    pathsToDelete.push(`pdfs/${folder}/${id}-valuation-memo.pdf`);
+  }
+
+  await del(pathsToDelete);
 }
 
 export async function uploadPDF(
