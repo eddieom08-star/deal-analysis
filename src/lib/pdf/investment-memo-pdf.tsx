@@ -5,6 +5,7 @@ import {
   View,
   Text,
 } from "@react-pdf/renderer";
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 import type { InvestmentMemoData } from "@/lib/types";
 import {
   baseStyles,
@@ -276,10 +277,12 @@ export function InvestmentMemoPDF({ data }: Props) {
           </Text>
           <StatusBadge status={data.goNoGo.decision} />
         </View>
-        {data.goNoGo.conditions && (
+        {data.goNoGo.conditions ? (
           <Text style={{ fontSize: 9, color: "#52525b", marginTop: 6 }}>
             {data.goNoGo.conditions}
           </Text>
+        ) : (
+          <View />
         )}
 
         <View style={{ marginTop: 24, borderTopWidth: 0.5, borderTopColor: "#e4e4e7", paddingTop: 8 }}>

@@ -7,6 +7,7 @@ import type {
 } from "@/lib/types";
 import { formatLRAddress } from "@/lib/apis/land-registry";
 import { format } from "date-fns";
+import { sanitizeInvestmentMemo } from "@/lib/pdf/sanitize";
 
 const SYSTEM_PROMPT = `You are an experienced Property Transactions Advisor with expertise in UK freehold restructuring, title engineering, and portfolio optimisation strategies. You specialise in helping small portfolio investors (2-20 properties) navigate title splitting transactions for BTL portfolios, HMOs, and mixed residential holdings.
 
@@ -201,14 +202,14 @@ export async function generateInvestmentMemo(
   let json = extractJson(response);
 
   try {
-    return JSON.parse(json) as InvestmentMemoData;
+    return sanitizeInvestmentMemo(JSON.parse(json));
   } catch (firstError) {
     // Retry with error feedback
     try {
       const retryPrompt = `${userPrompt}\n\nPREVIOUS ATTEMPT FAILED TO PARSE. Error: ${firstError}. The response must be valid JSON only, no markdown wrapping. Start with { and end with }.`;
       response = await callClaude(SYSTEM_PROMPT, retryPrompt, 12000);
       json = extractJson(response);
-      return JSON.parse(json) as InvestmentMemoData;
+      return sanitizeInvestmentMemo(JSON.parse(json));
     } catch (retryError) {
       throw new Error(
         `Claude JSON parse failed after retry: ${retryError instanceof Error ? retryError.message : 'Unknown'}`,

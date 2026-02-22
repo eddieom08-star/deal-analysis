@@ -122,7 +122,7 @@ export function Table({ headers, rows, columnWidths }: TableProps) {
               key={cellIdx}
               style={[tableStyles.cell, { width: `${widths[cellIdx]}%` }]}
             >
-              {cell}
+              {cell ?? "N/A"}
             </Text>
           ))}
         </View>

@@ -138,7 +138,7 @@ export function ValuationMemoPDF({ data }: Props) {
           </Text>
         </View>
 
-        {ce.comparables.some((c) => c.specialNotes) && (
+        {ce.comparables.some((c) => c.specialNotes) ? (
           <View style={{ marginTop: 8 }}>
             <Text style={baseStyles.h3}>Notes on Comparables</Text>
             {ce.comparables
@@ -149,6 +149,8 @@ export function ValuationMemoPDF({ data }: Props) {
                 </Text>
               ))}
           </View>
+        ) : (
+          <View />
         )}
 
         {/* Section D: Property Layout */}
@@ -156,10 +158,12 @@ export function ValuationMemoPDF({ data }: Props) {
         <Text style={{ fontSize: 9 }}>
           Existing Plans: {pl.hasExistingPlans ? "Available" : "Not available from listing"}
         </Text>
-        {pl.planSource && (
+        {pl.planSource ? (
           <Text style={{ fontSize: 9, color: "#52525b", marginTop: 2 }}>
             Source: {pl.planSource}
           </Text>
+        ) : (
+          <View />
         )}
         <Text style={{ fontSize: 9, marginTop: 6 }}>
           {pl.proposedDemiseNotes}
@@ -168,8 +172,8 @@ export function ValuationMemoPDF({ data }: Props) {
         {/* Section E: Demised Areas */}
         <Text style={baseStyles.h2}>E. DEMISED AREAS THAT DRIVE VALUE</Text>
 
-        {da.parkingSpaces.length > 0 && (
-          <>
+        {da.parkingSpaces.length > 0 ? (
+          <View>
             <Text style={baseStyles.h3}>Parking Spaces</Text>
             <Table
               headers={["Space", "Allocated To", "Est. Value Add"]}
@@ -180,11 +184,13 @@ export function ValuationMemoPDF({ data }: Props) {
                 fmtCurrency(p.estimatedValueAdd),
               ])}
             />
-          </>
+          </View>
+        ) : (
+          <View />
         )}
 
-        {da.gardens.length > 0 && (
-          <>
+        {da.gardens.length > 0 ? (
+          <View>
             <Text style={baseStyles.h3}>Gardens / Patios</Text>
             <Table
               headers={["Area", "Allocated To", "Est. Value Add"]}
@@ -195,7 +201,9 @@ export function ValuationMemoPDF({ data }: Props) {
                 fmtCurrency(g.estimatedValueAdd),
               ])}
             />
-          </>
+          </View>
+        ) : (
+          <View />
         )}
 
         <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold", marginTop: 8 }}>
@@ -221,11 +229,13 @@ export function ValuationMemoPDF({ data }: Props) {
             <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>Insurance</Text>
             <Text style={{ fontSize: 9, color: "#52525b" }}>{pn.insuranceNote}</Text>
           </View>
-          {pn.additionalNotes && (
+          {pn.additionalNotes ? (
             <View>
               <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>Additional Notes</Text>
               <Text style={{ fontSize: 9, color: "#52525b" }}>{pn.additionalNotes}</Text>
             </View>
+          ) : (
+            <View />
           )}
         </View>
 

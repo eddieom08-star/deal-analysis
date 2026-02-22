@@ -84,7 +84,7 @@ export function AnalysisCard({ analysis }: { analysis: AnalysisRecord }) {
         </div>
       )}
 
-      {isComplete && (
+      {isComplete && analysis.pdfs && (
         <div className="mt-3 flex gap-2">
           {analysis.pdfs.investmentMemoUrl && (
             <span className="rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400">

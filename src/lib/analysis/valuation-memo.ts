@@ -6,6 +6,7 @@ import type {
 } from "@/lib/types";
 import { formatLRAddress } from "@/lib/apis/land-registry";
 import { format } from "date-fns";
+import { sanitizeValuationMemo } from "@/lib/pdf/sanitize";
 
 const SYSTEM_PROMPT = `You are a RICS-qualified property valuation specialist preparing a valuation memo for a UK property title split.
 
@@ -184,13 +185,13 @@ export async function generateValuationMemo(
   let json = extractJson(response);
 
   try {
-    return JSON.parse(json) as ValuationMemoData;
+    return sanitizeValuationMemo(JSON.parse(json));
   } catch (firstError) {
     try {
       const retryPrompt = `${userPrompt}\n\nPREVIOUS ATTEMPT FAILED TO PARSE. Error: ${firstError}. The response must be valid JSON only. Start with { and end with }.`;
       response = await callClaude(SYSTEM_PROMPT, retryPrompt, 10000);
       json = extractJson(response);
-      return JSON.parse(json) as ValuationMemoData;
+      return sanitizeValuationMemo(JSON.parse(json));
     } catch (retryError) {
       throw new Error(
         `Claude JSON parse failed after retry: ${retryError instanceof Error ? retryError.message : 'Unknown'}`,

@@ -21,6 +21,13 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  if (!analysis.pdfs) {
+    return NextResponse.json(
+      { error: "PDF not yet generated" },
+      { status: 404 },
+    );
+  }
+
   const pdfUrl =
     type === "investment"
       ? analysis.pdfs.investmentMemoUrl
