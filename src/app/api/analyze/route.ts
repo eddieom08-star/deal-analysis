@@ -61,5 +61,5 @@ export async function POST(request: Request) {
   // Execute pipeline synchronously (serverless compatible)
   await runAnalysisPipeline(analysis);
 
-  return NextResponse.json({ id, status: "complete" }, { status: 201 });
+  return NextResponse.json({ id, status: analysis.status }, { status: 201 });
 }

@@ -99,7 +99,8 @@ Transaction Count: ${pdSold.transactionCount}
 | Address | Price | Date | Type | Tenure | Distance |
 |---------|-------|------|------|--------|----------|
 `;
-    for (const s of pdSold.data?.slice(0, 20) || []) {
+    const soldData = Array.isArray(pdSold?.data) ? pdSold.data : [];
+    for (const s of soldData.slice(0, 20)) {
       prompt += `| ${s.address} | £${s.price.toLocaleString()} | ${s.date} | ${s.type} | ${s.tenure} | ${s.distance}mi |\n`;
     }
   }
@@ -112,7 +113,8 @@ Average £/sqft: £${pdSqft.averagePricePerSqft}
 | Address | Price | Date | Sqft | £/sqft | Type | Tenure | Distance |
 |---------|-------|------|------|--------|------|--------|----------|
 `;
-    for (const s of pdSqft.data?.slice(0, 15) || []) {
+    const sqftData = Array.isArray(pdSqft?.data) ? pdSqft.data : [];
+    for (const s of sqftData.slice(0, 15)) {
       prompt += `| ${s.address} | £${s.price.toLocaleString()} | ${s.date} | ${s.sqft} | £${s.pricePerSqft} | ${s.type} | ${s.tenure} | ${s.distance}mi |\n`;
     }
   }

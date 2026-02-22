@@ -1,4 +1,6 @@
 import type { EPCCertificate } from "@/lib/types";
+import { withRetry } from "@/lib/utils/retry";
+import { epcCircuit } from "@/lib/utils/circuit-breaker";
 
 const BASE_URL = "https://epc.opendatacommunities.org/api/v1/domestic/search";
 
@@ -40,68 +42,82 @@ export async function searchByPostcode(
   postcode: string,
   options: { size?: number } = {},
 ): Promise<EPCCertificate[]> {
-  const params = new URLSearchParams({
-    postcode: postcode.replace(/\s+/g, ""),
-    size: String(options.size || 100),
-  });
+  return await epcCircuit.execute(() =>
+    withRetry(async () => {
+      const params = new URLSearchParams({
+        postcode: postcode.replace(/\s+/g, ""),
+        size: String(options.size || 100),
+      });
 
-  const response = await fetch(`${BASE_URL}?${params}`, {
-    headers: {
-      Authorization: getAuthHeader(),
-      Accept: "application/json",
-    },
-    signal: AbortSignal.timeout(15000), // 15-second timeout
-  });
+      const response = await fetch(`${BASE_URL}?${params}`, {
+        headers: {
+          Authorization: getAuthHeader(),
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(15000), // 15-second timeout
+      });
 
-  if (!response.ok) {
-    if (response.status === 404) return [];
-    if (response.status === 401) {
-      throw new Error("EPC API authentication failed. Check EPC_API_KEY format (email:apikey)");
-    }
-    throw new Error(`EPC API returned ${response.status}`);
-  }
+      if (!response.ok) {
+        if (response.status === 404) return [];
+        if (response.status === 401) {
+          throw new Error("EPC API authentication failed. Check EPC_API_KEY format (email:apikey)");
+        }
+        throw new Error(`EPC API returned ${response.status}`);
+      }
 
-  let data: EPCApiResponse;
-  try {
-    data = await response.json();
-  } catch (error) {
-    throw new Error(`Failed to parse JSON from EPC API: ${error instanceof Error ? error.message : 'Unknown'}`);
-  }
+      let data: EPCApiResponse;
+      try {
+        data = await response.json();
+      } catch (error) {
+        throw new Error(`Failed to parse JSON from EPC API: ${error instanceof Error ? error.message : 'Unknown'}`);
+      }
 
-  return (data.rows || []).map(parseEpcRow);
+      return (data.rows || []).map(parseEpcRow);
+    }, {
+      maxAttempts: 3,
+      initialDelay: 1000,
+    })
+  );
 }
 
 export async function searchByAddress(
   address: string,
   postcode: string,
 ): Promise<EPCCertificate[]> {
-  const params = new URLSearchParams({
-    address: address,
-    postcode: postcode.replace(/\s+/g, ""),
-    size: "10",
-  });
+  return await epcCircuit.execute(() =>
+    withRetry(async () => {
+      const params = new URLSearchParams({
+        address: address,
+        postcode: postcode.replace(/\s+/g, ""),
+        size: "10",
+      });
 
-  const response = await fetch(`${BASE_URL}?${params}`, {
-    headers: {
-      Authorization: getAuthHeader(),
-      Accept: "application/json",
-    },
-    signal: AbortSignal.timeout(15000), // 15-second timeout
-  });
+      const response = await fetch(`${BASE_URL}?${params}`, {
+        headers: {
+          Authorization: getAuthHeader(),
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(15000), // 15-second timeout
+      });
 
-  if (!response.ok) {
-    if (response.status === 404) return [];
-    throw new Error(`EPC API returned ${response.status}`);
-  }
+      if (!response.ok) {
+        if (response.status === 404) return [];
+        throw new Error(`EPC API returned ${response.status}`);
+      }
 
-  let data: EPCApiResponse;
-  try {
-    data = await response.json();
-  } catch (error) {
-    throw new Error(`Failed to parse JSON from EPC API: ${error instanceof Error ? error.message : 'Unknown'}`);
-  }
+      let data: EPCApiResponse;
+      try {
+        data = await response.json();
+      } catch (error) {
+        throw new Error(`Failed to parse JSON from EPC API: ${error instanceof Error ? error.message : 'Unknown'}`);
+      }
 
-  return (data.rows || []).map(parseEpcRow);
+      return (data.rows || []).map(parseEpcRow);
+    }, {
+      maxAttempts: 3,
+      initialDelay: 1000,
+    })
+  );
 }
 
 export function formatEpcAddress(epc: EPCCertificate): string {

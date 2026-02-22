@@ -42,7 +42,21 @@ export async function getAnalysis(
     const text = new TextDecoder().decode(
       new Uint8Array(chunks.reduce((acc, chunk) => acc.concat(Array.from(chunk)), [] as number[]))
     );
-    return JSON.parse(text) as AnalysisRecord;
+    const parsed = JSON.parse(text) as AnalysisRecord;
+
+    // Validate and fix corrupted PropertyData fields
+    if (parsed.comparables?.propertyData) {
+      if (parsed.comparables.propertyData.soldPrices && !Array.isArray(parsed.comparables.propertyData.soldPrices.data)) {
+        console.warn(`Corrupted soldPrices.data for analysis ${id}, resetting to []`);
+        parsed.comparables.propertyData.soldPrices.data = [];
+      }
+      if (parsed.comparables.propertyData.soldPricesPerSqft && !Array.isArray(parsed.comparables.propertyData.soldPricesPerSqft.data)) {
+        console.warn(`Corrupted soldPricesPerSqft.data for analysis ${id}, resetting to []`);
+        parsed.comparables.propertyData.soldPricesPerSqft.data = [];
+      }
+    }
+
+    return parsed;
   } catch {
     return null;
   }

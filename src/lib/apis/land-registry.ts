@@ -1,4 +1,6 @@
 import type { LandRegistryTransaction } from "@/lib/types";
+import { withRetry } from "@/lib/utils/retry";
+import { landRegistryCircuit } from "@/lib/utils/circuit-breaker";
 
 const BASE_URL = "https://landregistry.data.gov.uk/data/ppi";
 
@@ -59,46 +61,53 @@ export async function getTransactionsByPostcode(
   postcode: string,
   options: { maxAgeMonths?: number; propertyType?: string } = {},
 ): Promise<LandRegistryTransaction[]> {
-  const cleanPostcode = postcode.replace(/\s+/g, "+");
-  const url = `${BASE_URL}/transaction-record.json?propertyAddress.postcode=${cleanPostcode}&_pageSize=100&_sort=-transactionDate`;
+  return await landRegistryCircuit.execute(() =>
+    withRetry(async () => {
+      const cleanPostcode = postcode.replace(/\s+/g, "+");
+      const url = `${BASE_URL}/transaction-record.json?propertyAddress.postcode=${cleanPostcode}&_pageSize=100&_sort=-transactionDate`;
 
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(15000), // 15-second timeout
-  });
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(15000), // 15-second timeout
+      });
 
-  if (!response.ok) {
-    if (response.status === 404) return [];
-    throw new Error(`Land Registry API returned ${response.status}`);
-  }
+      if (!response.ok) {
+        if (response.status === 404) return [];
+        throw new Error(`Land Registry API returned ${response.status}`);
+      }
 
-  let data: LRJsonLdResult;
-  try {
-    data = await response.json();
-  } catch (error) {
-    throw new Error(`Failed to parse JSON from Land Registry API: ${error instanceof Error ? error.message : 'Unknown'}`);
-  }
+      let data: LRJsonLdResult;
+      try {
+        data = await response.json();
+      } catch (error) {
+        throw new Error(`Failed to parse JSON from Land Registry API: ${error instanceof Error ? error.message : 'Unknown'}`);
+      }
 
-  const items = data?.result?.items || [];
+      const items = data?.result?.items || [];
 
-  let transactions = items.map(parseTransaction);
+      let transactions = items.map(parseTransaction);
 
-  // Filter to standard transactions only
-  transactions = transactions.filter((t) => t.recordStatus === "A");
+      // Filter to standard transactions only
+      transactions = transactions.filter((t) => t.recordStatus === "A");
 
-  // Filter by age
-  const maxAge = options.maxAgeMonths || 18;
-  const cutoff = new Date();
-  cutoff.setMonth(cutoff.getMonth() - maxAge);
-  const cutoffStr = cutoff.toISOString().slice(0, 10);
-  transactions = transactions.filter((t) => t.date >= cutoffStr);
+      // Filter by age
+      const maxAge = options.maxAgeMonths || 18;
+      const cutoff = new Date();
+      cutoff.setMonth(cutoff.getMonth() - maxAge);
+      const cutoffStr = cutoff.toISOString().slice(0, 10);
+      transactions = transactions.filter((t) => t.date >= cutoffStr);
 
-  // Filter by property type
-  if (options.propertyType === "flat") {
-    transactions = transactions.filter((t) => t.propertyType === "F");
-  }
+      // Filter by property type
+      if (options.propertyType === "flat") {
+        transactions = transactions.filter((t) => t.propertyType === "F");
+      }
 
-  return transactions;
+      return transactions;
+    }, {
+      maxAttempts: 3,
+      initialDelay: 1000,
+    })
+  );
 }
 
 export function formatLRAddress(addr: LandRegistryTransaction["address"]): string {

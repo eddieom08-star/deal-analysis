@@ -109,7 +109,8 @@ Average £/sqft: £${pdSqft.averagePricePerSqft}
 | Address | Price | Date | Sqft | £/sqft | Type | Distance |
 |---------|-------|------|------|--------|------|----------|
 `;
-    for (const s of pdSqft.data?.slice(0, 15) || []) {
+    const sqftData = Array.isArray(pdSqft?.data) ? pdSqft.data : [];
+    for (const s of sqftData.slice(0, 15)) {
       prompt += `| ${s.address} | £${s.price.toLocaleString()} | ${s.date} | ${s.sqft} | £${s.pricePerSqft} | ${s.type} | ${s.distance}mi |\n`;
     }
   }

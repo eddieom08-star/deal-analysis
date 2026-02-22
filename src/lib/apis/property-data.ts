@@ -3,6 +3,14 @@ import type {
   PropertyDataSoldPricesPerSqft,
   PropertyDataValuation,
 } from "@/lib/types";
+import {
+  PropertyDataSoldPricesSchema,
+  PropertyDataSoldPricesPerSqftSchema,
+  PropertyDataValuationSchema,
+} from "@/lib/types";
+import { z } from "zod/v4";
+import { withRetry } from "@/lib/utils/retry";
+import { propertyDataCircuit } from "@/lib/utils/circuit-breaker";
 
 const BASE_URL = "https://api.propertydata.co.uk";
 
@@ -15,42 +23,62 @@ function apiKey(): string {
 async function fetchPropertyData<T>(
   endpoint: string,
   params: Record<string, string | number | undefined>,
+  schema: z.ZodSchema<T>,
 ): Promise<T> {
-  const url = new URL(`${BASE_URL}/${endpoint}`);
-  url.searchParams.set("key", apiKey());
+  return await propertyDataCircuit.execute(() =>
+    withRetry(async () => {
+      const url = new URL(`${BASE_URL}/${endpoint}`);
+      url.searchParams.set("key", apiKey());
 
-  for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined) {
-      url.searchParams.set(k, String(v));
-    }
-  }
+      for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined) {
+          url.searchParams.set(k, String(v));
+        }
+      }
 
-  const response = await fetch(url.toString(), {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(15000), // 15-second timeout
-  });
+      const response = await fetch(url.toString(), {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(15000), // 15-second timeout
+      });
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(
-      `PropertyData ${endpoint} returned ${response.status}: ${text}`,
-    );
-  }
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        throw new Error(
+          `PropertyData ${endpoint} returned ${response.status}: ${text}`,
+        );
+      }
 
-  let data: any;
-  try {
-    data = await response.json();
-  } catch (error) {
-    throw new Error(`Failed to parse JSON from PropertyData API: ${error instanceof Error ? error.message : 'Unknown'}`);
-  }
+      let data: any;
+      try {
+        data = await response.json();
+      } catch (error) {
+        throw new Error(`Failed to parse JSON from PropertyData API: ${error instanceof Error ? error.message : 'Unknown'}`);
+      }
 
-  if (data.status === "error") {
-    throw new Error(
-      `PropertyData ${endpoint} error: ${data.message || "Unknown error"}`,
-    );
-  }
+      if (data.status === "error") {
+        throw new Error(
+          `PropertyData ${endpoint} error: ${data.message || "Unknown error"}`,
+        );
+      }
 
-  return data as T;
+      // Validate with Zod schema
+      const result = schema.safeParse(data);
+      if (!result.success) {
+        console.error(`PropertyData ${endpoint} validation failed:`, {
+          issues: result.error.issues,
+          rawData: JSON.stringify(data).slice(0, 500),
+        });
+        throw new Error(
+          `PropertyData ${endpoint} returned invalid structure: ${result.error.issues[0].path.join('.')} - ${result.error.issues[0].message}`,
+        );
+      }
+
+      return result.data;
+    }, {
+      maxAttempts: 3,
+      initialDelay: 1000,
+    })
+  );
 }
 
 export interface SoldPricesOptions {
@@ -65,14 +93,18 @@ export async function getSoldPrices(
   postcode: string,
   options: SoldPricesOptions = {},
 ): Promise<PropertyDataSoldPrices> {
-  return fetchPropertyData<PropertyDataSoldPrices>("sold-prices", {
-    postcode,
-    type: options.type,
-    tenure: options.tenure,
-    max_age: options.maxAge,
-    bedrooms: options.bedrooms,
-    points: options.points,
-  });
+  return fetchPropertyData<PropertyDataSoldPrices>(
+    "sold-prices",
+    {
+      postcode,
+      type: options.type,
+      tenure: options.tenure,
+      max_age: options.maxAge,
+      bedrooms: options.bedrooms,
+      points: options.points,
+    },
+    PropertyDataSoldPricesSchema,
+  );
 }
 
 export interface SoldPricesPerSqftOptions {
@@ -97,6 +129,7 @@ export async function getSoldPricesPerSqft(
       min_sqf: options.minSqf,
       max_sqf: options.maxSqf,
     },
+    PropertyDataSoldPricesPerSqftSchema,
   );
 }
 
@@ -115,15 +148,19 @@ export interface ValuationParams {
 export async function getValuation(
   params: ValuationParams,
 ): Promise<PropertyDataValuation> {
-  return fetchPropertyData<PropertyDataValuation>("valuation-sale", {
-    postcode: params.postcode,
-    property_type: params.propertyType,
-    construction_date: params.constructionDate,
-    internal_area: params.internalArea,
-    bedrooms: params.bedrooms,
-    bathrooms: params.bathrooms,
-    finish_quality: params.finishQuality,
-    outdoor_space: params.outdoorSpace,
-    off_street_parking: params.offStreetParking,
-  });
+  return fetchPropertyData<PropertyDataValuation>(
+    "valuation-sale",
+    {
+      postcode: params.postcode,
+      property_type: params.propertyType,
+      construction_date: params.constructionDate,
+      internal_area: params.internalArea,
+      bedrooms: params.bedrooms,
+      bathrooms: params.bathrooms,
+      finish_quality: params.finishQuality,
+      outdoor_space: params.outdoorSpace,
+      off_street_parking: params.offStreetParking,
+    },
+    PropertyDataValuationSchema,
+  );
 }

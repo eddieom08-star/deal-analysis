@@ -111,8 +111,8 @@ export interface PropertyDataSoldPrice {
 export interface PropertyDataSoldPrices {
   postcode: string;
   pointsAnalysed: number;
-  radius: number;
-  averagePrice: number;
+  radius?: number;
+  averagePrice: number | null;
   transactionCount: number;
   data: PropertyDataSoldPrice[];
   status: string;
@@ -141,8 +141,8 @@ export interface PropertyDataValuation {
   postcode: string;
   result: number;
   resultFormatted: string;
-  upperRange: number;
-  lowerRange: number;
+  upperRange: number | null;
+  lowerRange: number | null;
   confidenceLevel: string;
   pricePerSqft: number;
   status: string;
@@ -479,6 +479,13 @@ export interface AnalysisRecord {
   };
   emailSentAt: string | null;
   error: string | null;
+
+  // Pipeline resilience fields
+  lastCompletedStep?: AnalysisStatus;
+  retryCount?: number;
+  failureReason?: string;
+  retryableFailure?: boolean;
+  partialDataWarnings?: string[];
 }
 
 // ─── Zod Schemas for Runtime Validation ─────────────────────────────────────
@@ -495,3 +502,51 @@ export const submitAnalysisSchema = z.object({
 });
 
 export type SubmitAnalysisInput = z.infer<typeof submitAnalysisSchema>;
+
+// ─── PropertyData API Response Schemas ──────────────────────────────────────
+
+export const PropertyDataSoldPricesSchema = z.object({
+  postcode: z.string(),
+  averagePrice: z.number().nullable(),
+  transactionCount: z.number(),
+  pointsAnalysed: z.number(),
+  data: z.array(z.object({
+    address: z.string(),
+    price: z.number(),
+    date: z.string(),
+    type: z.string(),
+    tenure: z.string(),
+    newBuild: z.boolean(),
+    distance: z.number(),
+  })).default([]),
+  status: z.string(),
+  radius: z.number().optional(),
+});
+
+export const PropertyDataSoldPricesPerSqftSchema = z.object({
+  postcode: z.string(),
+  averagePricePerSqft: z.number(),
+  pointsAnalysed: z.number(),
+  data: z.array(z.object({
+    address: z.string(),
+    price: z.number(),
+    date: z.string(),
+    sqft: z.number(),
+    pricePerSqft: z.number(),
+    type: z.string(),
+    tenure: z.string(),
+    distance: z.number(),
+  })).default([]),
+  status: z.string(),
+});
+
+export const PropertyDataValuationSchema = z.object({
+  postcode: z.string(),
+  result: z.number(),
+  resultFormatted: z.string(),
+  upperRange: z.number().nullable(),
+  lowerRange: z.number().nullable(),
+  confidenceLevel: z.string(),
+  pricePerSqft: z.number(),
+  status: z.string(),
+});
