@@ -1,4 +1,4 @@
-import { put, list, head } from "@vercel/blob";
+import { put, list, head, get } from "@vercel/blob";
 import type { AnalysisRecord } from "@/lib/types";
 
 function slugify(text: string): string {
@@ -14,9 +14,10 @@ export async function saveAnalysis(analysis: AnalysisRecord): Promise<string> {
     `analyses/${analysis.id}.json`,
     JSON.stringify(analysis),
     {
-      access: "public",
+      access: "private",
       contentType: "application/json",
       addRandomSuffix: false,
+      allowOverwrite: true,
     },
   );
   return blob.url;
@@ -26,10 +27,22 @@ export async function getAnalysis(
   id: string,
 ): Promise<AnalysisRecord | null> {
   try {
-    const blobInfo = await head(`analyses/${id}.json`);
-    const response = await fetch(blobInfo.url);
-    if (!response.ok) return null;
-    return (await response.json()) as AnalysisRecord;
+    const result = await get(`analyses/${id}.json`, { access: "private" });
+    if (!result || result.statusCode !== 200) return null;
+
+    // Read stream to text
+    const reader = result.stream.getReader();
+    const chunks: Uint8Array[] = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+
+    const text = new TextDecoder().decode(
+      new Uint8Array(chunks.reduce((acc, chunk) => acc.concat(Array.from(chunk)), [] as number[]))
+    );
+    return JSON.parse(text) as AnalysisRecord;
   } catch {
     return null;
   }
@@ -42,9 +55,20 @@ export async function listAnalyses(): Promise<AnalysisRecord[]> {
   for (const blob of blobs) {
     if (!blob.pathname.endsWith(".json")) continue;
     try {
-      const response = await fetch(blob.url);
-      if (response.ok) {
-        const data = (await response.json()) as AnalysisRecord;
+      const result = await get(blob.pathname, { access: "private" });
+      if (result && result.statusCode === 200) {
+        const reader = result.stream.getReader();
+        const chunks: Uint8Array[] = [];
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+        }
+
+        const text = new TextDecoder().decode(
+          new Uint8Array(chunks.reduce((acc, chunk) => acc.concat(Array.from(chunk)), [] as number[]))
+        );
+        const data = JSON.parse(text) as AnalysisRecord;
         analyses.push(data);
       }
     } catch {
@@ -71,7 +95,7 @@ export async function uploadPDF(
   const bufferData = buffer instanceof Buffer ? buffer : Buffer.from(buffer);
 
   const blob = await put(path, bufferData, {
-    access: "public",
+    access: "private",
     contentType: "application/pdf",
     addRandomSuffix: false,
   });
