@@ -33,7 +33,7 @@ export function DeleteAnalysisButton({ analysisId }: { analysisId: string }) {
           e.preventDefault();
           setConfirming(true);
         }}
-        className="rounded-lg border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-400 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400"
+        className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-400 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400"
       >
         Delete
       </button>
@@ -42,7 +42,7 @@ export function DeleteAnalysisButton({ analysisId }: { analysisId: string }) {
 
   return (
     <div
-      className="flex gap-2"
+      className="flex gap-3"
       onClick={(e) => {
         e.stopPropagation();
         e.preventDefault();
@@ -51,14 +51,14 @@ export function DeleteAnalysisButton({ analysisId }: { analysisId: string }) {
       <button
         onClick={handleDelete}
         disabled={deleting}
-        className="rounded-lg bg-red-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-red-500 disabled:opacity-50"
+        className="rounded-lg bg-red-600 px-3.5 py-2 text-xs font-medium text-white transition-colors hover:bg-red-500 disabled:opacity-50"
       >
         {deleting ? "Deleting..." : "Confirm"}
       </button>
       <button
         onClick={() => setConfirming(false)}
         disabled={deleting}
-        className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-400 transition-colors hover:bg-zinc-700 disabled:opacity-50"
+        className="rounded-lg border border-zinc-700 bg-zinc-800 px-3.5 py-2 text-xs font-medium text-zinc-400 transition-colors hover:bg-zinc-700 disabled:opacity-50"
       >
         Cancel
       </button>

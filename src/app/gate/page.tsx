@@ -58,7 +58,7 @@ export default function GatePage() {
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
       <div className="w-full max-w-sm">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-8">
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5 sm:p-8">
           <h1 className="mb-1 text-xl font-semibold">Deal Analysis</h1>
           <p className="mb-6 text-sm text-zinc-500">
             {step === "email"
@@ -74,7 +74,7 @@ export default function GatePage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none"
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-base placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none"
               />
               {error && <p className="text-sm text-red-400">{error}</p>}
               <button
@@ -112,7 +112,7 @@ export default function GatePage() {
                   setCode("");
                   setError("");
                 }}
-                className="w-full text-sm text-zinc-500 hover:text-zinc-300"
+                className="w-full rounded-lg py-2.5 text-sm text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 transition-colors min-h-[44px]"
               >
                 Use a different email
               </button>

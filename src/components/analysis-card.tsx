@@ -28,7 +28,7 @@ export function AnalysisCard({ analysis }: { analysis: AnalysisRecord }) {
 
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5 transition-colors hover:border-zinc-700 hover:bg-zinc-800/50">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <a href={`/analysis/${analysis.id}`} className="min-w-0 flex-1">
           <h3 className="truncate font-medium">{address}</h3>
           <p className="mt-1 text-sm text-zinc-500">
@@ -39,7 +39,7 @@ export function AnalysisCard({ analysis }: { analysis: AnalysisRecord }) {
           </p>
         </a>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {isProcessing && (
             <span className="flex items-center gap-1.5 rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-400">
               <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400" />
@@ -65,7 +65,7 @@ export function AnalysisCard({ analysis }: { analysis: AnalysisRecord }) {
 
       <a href={`/analysis/${analysis.id}`} className="block">
         {isComplete && analysis.investmentMemo && (
-          <div className="mt-4 flex gap-6 text-sm">
+          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm sm:gap-x-6">
             <div>
               <span className="text-zinc-500">Profit </span>
               <span className="font-medium text-green-400">
@@ -88,7 +88,7 @@ export function AnalysisCard({ analysis }: { analysis: AnalysisRecord }) {
         )}
 
         {isComplete && analysis.pdfs && (
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             {analysis.pdfs.investmentMemoUrl && (
               <span className="rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400">
                 Investment Memo

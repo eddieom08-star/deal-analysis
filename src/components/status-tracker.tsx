@@ -107,7 +107,7 @@ export function StatusTracker({ analysisId }: { analysisId: string }) {
     <div className="space-y-8">
       {/* Property Info */}
       {data.listing && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6">
           <h2 className="text-lg font-semibold">{data.listing.address}</h2>
           <p className="mt-1 text-zinc-400">
             {data.listing.price} - {data.listing.propertyType}
@@ -116,7 +116,7 @@ export function StatusTracker({ analysisId }: { analysisId: string }) {
       )}
 
       {/* Progress Steps */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6">
         <h3 className="mb-4 text-sm font-medium text-zinc-400">Progress</h3>
         <div className="space-y-3">
           {STEP_ORDER.filter((s) => s !== "pending").map((step, idx) => {
@@ -167,7 +167,7 @@ export function StatusTracker({ analysisId }: { analysisId: string }) {
 
       {/* Error */}
       {isFailed && data.error && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-6">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 sm:p-6">
           <h3 className="font-medium text-red-400">Analysis Failed</h3>
           <p className="mt-2 text-sm text-red-300">{data.error}</p>
         </div>
@@ -177,7 +177,7 @@ export function StatusTracker({ analysisId }: { analysisId: string }) {
       {isComplete && data.investmentMemo && (
         <div className="space-y-6">
           {/* Key Metrics */}
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-sm font-medium text-zinc-400">Key Metrics</h3>
               <span className={`rounded-full px-3 py-1 text-xs font-bold ${recColor} ${
@@ -219,7 +219,7 @@ export function StatusTracker({ analysisId }: { analysisId: string }) {
           </div>
 
           {/* Downloads */}
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6">
             <h3 className="mb-4 text-sm font-medium text-zinc-400">
               Download Reports
             </h3>
