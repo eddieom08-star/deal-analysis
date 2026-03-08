@@ -226,7 +226,7 @@ export function StatusTracker({ analysisId }: { analysisId: string }) {
             <div className="flex flex-col gap-3 sm:flex-row">
               {data.pdfs.investmentMemoUrl && (
                 <a
-                  href={data.pdfs.investmentMemoUrl}
+                  href={`/api/download/${data.id}?type=investment`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-500"
@@ -239,7 +239,7 @@ export function StatusTracker({ analysisId }: { analysisId: string }) {
               )}
               {data.pdfs.valuationMemoUrl && (
                 <a
-                  href={data.pdfs.valuationMemoUrl}
+                  href={`/api/download/${data.id}?type=valuation`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 rounded-lg bg-zinc-700 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-600"

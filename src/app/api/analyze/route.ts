@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { nanoid } from "nanoid";
 import { submitAnalysisSchema, AnalysisStatus } from "@/lib/types";
 import type { AnalysisRecord } from "@/lib/types";
@@ -58,8 +58,10 @@ export async function POST(request: Request) {
     );
   }
 
-  // Execute pipeline synchronously (serverless compatible)
-  await runAnalysisPipeline(analysis);
+  // Run pipeline in background — response returns immediately
+  after(async () => {
+    await runAnalysisPipeline(analysis);
+  });
 
-  return NextResponse.json({ id, status: analysis.status }, { status: 201 });
+  return NextResponse.json({ id }, { status: 201 });
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { get } from "@vercel/blob";
 import { getAnalysis } from "@/lib/storage/blob";
 
 export async function GET(
@@ -40,5 +41,31 @@ export async function GET(
     );
   }
 
-  return NextResponse.redirect(pdfUrl);
+  let result;
+  try {
+    result = await get(pdfUrl, { access: "private" });
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to retrieve PDF from storage" },
+      { status: 502 },
+    );
+  }
+
+  if (!result || result.statusCode !== 200 || !result.stream) {
+    return NextResponse.json(
+      { error: "PDF not found in storage" },
+      { status: 404 },
+    );
+  }
+
+  const filename = `${id}-${type}-memo.pdf`;
+
+  return new Response(result.stream, {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Length": String(result.blob.size),
+      "Content-Disposition": `inline; filename="${filename}"`,
+      "Cache-Control": "private, max-age=3600",
+    },
+  });
 }
