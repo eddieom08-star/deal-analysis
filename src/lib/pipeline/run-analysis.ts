@@ -19,28 +19,33 @@ function updateStatus(analysis: AnalysisRecord, status: AnalysisStatus): Analysi
   return { ...analysis, status, updatedAt: new Date().toISOString() };
 }
 
-function validateSufficientData(comparables: ComparableEvidence): void {
+function assessDataAvailability(comparables: ComparableEvidence): string[] {
+  const warnings: string[] = [];
+
   const hasPropertyData =
     comparables.propertyData.soldPrices !== null ||
     comparables.propertyData.soldPricesPerSqft !== null;
-  const hasEnrichedComps = comparables.enrichedComparables.length >= 3;
-  const hasLandRegistry = comparables.landRegistry.length >= 5;
+  const hasEnrichedComps = comparables.enrichedComparables.length > 0;
+  const hasLandRegistry = comparables.landRegistry.length > 0;
 
-  // Require AT LEAST ONE data source (not all)
-  if (!hasPropertyData && !hasEnrichedComps && !hasLandRegistry) {
-    throw new Error(
-      "INSUFFICIENT_DATA: Need at least one data source (PropertyData, enriched comparables, or Land Registry). " +
-      "All external APIs failed.",
-    );
-  }
-
-  // Log warnings for missing sources
   if (!hasPropertyData) {
-    console.warn("PropertyData APIs unavailable - relying on Land Registry + EPC data");
+    warnings.push("PropertyData APIs unavailable - Claude will estimate from available data");
   }
   if (!hasEnrichedComps) {
-    console.warn("Insufficient enriched comparables - relying on raw transaction data");
+    warnings.push("No enriched comparables (LR+EPC match) - using raw transaction data");
   }
+  if (!hasLandRegistry) {
+    warnings.push("No Land Registry transactions found - relying on PropertyData only");
+  }
+  if (!hasPropertyData && !hasEnrichedComps && !hasLandRegistry) {
+    warnings.push("WARNING: All external data APIs failed - Claude will generate analysis from listing data only. Results will be less accurate.");
+  }
+
+  for (const w of warnings) {
+    console.warn(`[pipeline] ${w}`);
+  }
+
+  return warnings;
 }
 
 async function shouldResumeAnalysis(analysis: AnalysisRecord): Promise<boolean> {
@@ -209,7 +214,14 @@ export async function runAnalysisPipeline(analysis: AnalysisRecord): Promise<voi
       throw new Error("Comparable evidence missing - cannot proceed");
     }
     const validatedComparables = analysis.comparables;
-    validateSufficientData(validatedComparables);
+    const dataWarnings = assessDataAvailability(validatedComparables);
+    if (dataWarnings.length > 0) {
+      analysis.partialDataWarnings = [
+        ...(analysis.partialDataWarnings || []),
+        ...dataWarnings,
+      ];
+      await saveAnalysis(analysis);
+    }
 
     // Step 4: Claude - Investment Memo
     if (!resumeFrom || [AnalysisStatus.SCRAPING, AnalysisStatus.FETCHING_DATA, AnalysisStatus.ENRICHING_COMPARABLES, AnalysisStatus.ANALYZING_INVESTMENT].includes(resumeFrom)) {
