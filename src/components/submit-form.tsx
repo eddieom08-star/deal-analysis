@@ -11,7 +11,16 @@ export function SubmitForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isValidUrl = /rightmove\.co\.uk\/properties\/\d+/.test(url);
+  // Accept any valid URL — site-specific validation happens server-side
+  let isValidUrl = false;
+  try {
+    if (url) {
+      const parsed = new URL(url);
+      isValidUrl = parsed.protocol === "https:" || parsed.protocol === "http:";
+    }
+  } catch {
+    isValidUrl = false;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,7 +34,7 @@ export function SubmitForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          rightmoveUrl: url,
+          listingUrl: url,
           userNotes: notes || undefined,
           reportEmail: email || undefined,
         }),
@@ -51,22 +60,25 @@ export function SubmitForm() {
           htmlFor="url"
           className="block text-sm font-medium text-zinc-300 mb-2"
         >
-          Rightmove Listing URL
+          Property Listing URL
         </label>
         <input
           id="url"
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://www.rightmove.co.uk/properties/123456789"
+          placeholder="https://www.rightmove.co.uk/properties/..."
           className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-base text-zinc-100 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           required
         />
         {url && !isValidUrl && (
           <p className="mt-1 text-sm text-red-400">
-            Must be a valid Rightmove property URL
+            Enter a valid property listing URL
           </p>
         )}
+        <p className="mt-2 text-xs text-zinc-500">
+          Supports Rightmove, OnTheMarket, and other UK property listing sites
+        </p>
       </div>
 
       <div>

@@ -1,6 +1,6 @@
 import { AnalysisStatus } from "@/lib/types";
 import type { AnalysisRecord, ComparableEvidence } from "@/lib/types";
-import { scrapeRightmoveListing } from "@/lib/scraper/rightmove";
+import { scrapeListing } from "@/lib/scraper";
 import { getSoldPrices, getSoldPricesPerSqft, getValuation } from "@/lib/apis/property-data";
 import { getTransactionsByPostcode } from "@/lib/apis/land-registry";
 import { searchByPostcode, sqmToSqft } from "@/lib/apis/epc";
@@ -90,12 +90,12 @@ export async function runAnalysisPipeline(analysis: AnalysisRecord): Promise<voi
       analysis.retryCount = currentRetryCount;
     }
 
-    // Step 1: Scrape Rightmove
+    // Step 1: Scrape listing
     if (!resumeFrom || resumeFrom === AnalysisStatus.SCRAPING) {
       analysis = updateStatus(analysis, AnalysisStatus.SCRAPING);
       await saveAnalysis(analysis);
 
-      const scraped = await scrapeRightmoveListing(analysis.input.rightmoveUrl);
+      const scraped = await scrapeListing(analysis.input.listingUrl);
       analysis.listing = scraped;
       analysis.lastCompletedStep = AnalysisStatus.SCRAPING;
       await saveAnalysis(analysis);

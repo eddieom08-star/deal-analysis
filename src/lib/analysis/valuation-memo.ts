@@ -8,70 +8,48 @@ import { formatLRAddress } from "@/lib/apis/land-registry";
 import { format } from "date-fns";
 import { sanitizeValuationMemo } from "@/lib/pdf/sanitize";
 
-const SYSTEM_PROMPT = `You are a RICS-qualified property valuation specialist preparing a valuation memo for a UK property title split.
+const SYSTEM_PROMPT = `You are a RICS-qualified property valuation specialist preparing a VALUATION MEMORANDUM for a UK property title split.
 
-Your task is to create a valuation memo with the following sections:
+This memo supports a formal RICS Red Book valuation instruction. It must be evidence-based, conservative, and professionally structured.
 
-A. HEADLINE VALUATION & SUMMARY
-Include a one-page summary:
-- "As is" freehold value (what the block is worth today as a single unit)
-- Aggregate / title split value: "what it's worth as X individual long-leasehold flats"
-- The valuer is asked to value both:
-  - Current freehold block value
-  - Value "on special assumption" that it's split to long leases (e.g. 999 years)
-- Show the difference between the two (i.e., the uplift) clearly
-- Include market value as is, aggregate market value based on individual leasehold sales
-- 180-day / 90-day values if possible
+YOUR OUTPUT MUST BE A SINGLE JSON OBJECT matching the ValuationMemoData interface exactly. No markdown, no commentary.
 
-B. VALUATION LOGIC / CALCULATIONS
-For each proposed flat:
-- Estimated split value
-- Basis (e.g. £/sq ft vs local sales)
-- Any premium for parking, garden, etc.
-Summary table: Flat 1 – £X, Flat 2 – £Y, etc.
-Total aggregate value = sum
-Show that your £/sq ft assumptions are at or below the local average.
+CRITICAL RULES:
 
-C. LOCAL COMPARABLE EVIDENCE
-3-5 comparables, ideally:
-- Within about 1/4–1/2 mile radius
-- Within 6-12 months if possible (up to ~18 months if stock is thin)
-For each comparable:
-- Address & type (e.g. 2-bed flat)
-- Sale price & date
-- Price per sq ft
-- Any special notes (condition, parking, garden, etc.)
-Show that the aggregate figure is consistent with actual sales.
-Show that your proposed £/sq ft is not higher than the average.
+1. TWO VALUATIONS REQUIRED:
+   - Market Value As Is (freehold block as single investment)
+   - Aggregate Value (individual long leasehold units, 999-year leases, share of freehold)
+   Show the uplift clearly: uplift = aggregate - as-is.
 
-D. PROPERTY LAYOUT / PLANS
-- Note if existing plans are available from the listing
-- Describe the proposed demise layout
-- Reference any floorplan images
+2. CONSERVATIVE APPROACH: Your adopted £/sqm rates should sit BELOW the local market median. Explain why with specific discount reasons (condition, heating type, floor level, conversion vs purpose-built, etc.).
 
-E. DEMISED AREAS THAT DRIVE VALUE
-- Parking spaces: allocation and value add per flat
-- Ground-floor gardens / patios: allocation and value add
-- These must be visible so the valuer understands the value-add structure
+3. MARKET RATE SUMMARY: Include Housemetric-style statistical baseline with lower quartile, median, upper quartile £/sqm from the data provided. Show how your adopted average compares (e.g. "-54% vs median = CONSERVATIVE").
 
-F. PRACTICAL / PROCESS NOTES
-- Special assumption: "as if split into long leases" (aggregate / title split / GDB)
-- Bridge exit or direct-to-mortgage at 75% of the higher value
-- Reinstatement cost note
-- Insurance considerations
+4. UNIT-BY-UNIT RATIONALE: For each flat, provide a detailed narrative explaining how you arrived at the value, citing specific comparable evidence.
 
-CRITICAL: DO NOT GUESS. Find evidence to support everything stated in the memo. If evidence is insufficient for a claim, state "INSUFFICIENT DATA" and explain what additional data is needed.
+5. COMPARABLE ANALYSIS: For each comparable, provide a narrative paragraph explaining its relevance and how it supports or adjusts your adopted rates.
 
-You MUST respond with valid JSON only. No markdown, no explanations outside the JSON.
+6. STREET-LEVEL DATA: Include a table showing average £/sqm for nearby streets with sample sizes.
 
-RULES:
-1. Comparable evidence must be within 1/4 - 1/2 mile radius, 6-12 months preferred (up to 18 months if thin market).
-2. £/sqft calculations must use EPC floor areas where available.
-3. Show that proposed £/sqft is at or below local average.
-4. Aggregate value = sum of individual flat valuations.
-5. Uplift = aggregate value - as-is freehold value.
-6. Each comparable must include: address, type, sale price, date, price per sqft, and any special notes.
-7. Cite the source for each piece of evidence ("PropertyData" or "LR+EPC").`;
+7. COMPARABLE EVIDENCE CONCLUSION: A summary paragraph confirming the evidence supports your adopted valuations.
+
+8. VERIFIED UNIT SCHEDULE: Include the full unit schedule with EPC-verified floor areas in Section D, plus a minimum size compliance statement.
+
+9. LEASE PLAN REQUIREMENTS: Bullet list of what RICS-compliant lease plans must show.
+
+10. BRIDGE FINANCE: Include bridge lender requirements (Day 1 LTV, Exit LTV, target LTV %).
+
+11. NEXT STEPS: Numbered list of recommended next actions.
+
+12. VALUATION SUMMARY REPEAT: At the end, repeat the key valuation figures in a summary.
+
+13. All comparable evidence must be within 0.5 miles, sold within 18 months (prefer 12 months).
+
+14. £/sqm calculations must use EPC floor areas where available.
+
+15. Cite the source for each piece of evidence ("PropertyData", "LR+EPC", "HM Land Registry").
+
+16. If evidence is insufficient, state "INSUFFICIENT DATA" and explain what's needed.`;
 
 function buildUserPrompt(
   listing: PropertyListing,
@@ -160,16 +138,99 @@ Agreement: ${xref.agreement}
     }
   }
 
-  prompt += `\n## REQUIRED OUTPUT
-Produce the Valuation Memo as JSON matching the ValuationMemoData interface:
-- headlineValuation (asIsFreehold, aggregateSplitValue, uplift, upliftPercent, day180Value, day90Value)
-- valuationLogic (perFlatValuations with sqm/sqft/pricePerSqft/estimatedValue/basis, totalAggregateValue, areaAveragePricePerSqft)
-- comparableEvidence (3-5 best comparables with full details and source citation)
-- propertyLayout (plans availability, proposed demise notes)
-- demisedAreas (parking, gardens, value impacts)
-- processNotes (special assumption, exit strategy, reinstatement, insurance)
+  // Land Registry raw
+  if (evidence.landRegistry.length > 0) {
+    prompt += `\n## ADDITIONAL LAND REGISTRY TRANSACTIONS
+| Address | Price | Date | Type | Tenure |
+|---------|-------|------|------|--------|
+`;
+    for (const t of evidence.landRegistry.slice(0, 15)) {
+      prompt += `| ${formatLRAddress(t.address)} | £${t.price.toLocaleString()} | ${t.date} | ${t.propertyType} | ${t.tenure === "L" ? "Leasehold" : "Freehold"} |\n`;
+    }
+  }
 
-Use today's date: ${format(new Date(), "yyyy-MM-dd")}
+  prompt += `\n## REQUIRED OUTPUT
+Produce the Valuation Memo as a single JSON object with these exact fields:
+
+{
+  "propertyAddress": "full address",
+  "propertyName": "building name if applicable, else empty string",
+  "propertySubtitle": "e.g. Freehold Block of 6 Self-Contained Flats",
+  "analysisDate": "${format(new Date(), "yyyy-MM-dd")}",
+  "headlineValuation": {
+    "asIsFreehold": number,
+    "aggregateSplitValue": number,
+    "uplift": number,
+    "upliftPercent": number,
+    "valuationBasis": "narrative explaining Market Value As Is basis",
+    "aggregateValueBasis": "narrative explaining Aggregate Value (Special Assumption) basis",
+    "valuationDateContext": {
+      "valuationDate": "date string",
+      "day90Value": "range string or null",
+      "day180Value": "range string or null",
+      "marketEvidencePeriod": "e.g. 24 months to January 2026",
+      "transactionSampleSize": "e.g. 278 sales in SN15 1 postcode sector"
+    },
+    "propertySummary": {
+      "address", "propertyType", "tenure", "numberOfUnits", "totalFloorArea",
+      "construction", "heating", "epcRatings", "condition", "parking", "gardens"
+    }
+  },
+  "valuationLogic": {
+    "introText": "narrative about valuation methodology",
+    "marketRateSummary": {
+      "source": "e.g. Housemetric.co.uk",
+      "sampleDescription": "e.g. 278 residential transactions over 24 months",
+      "lowerQuartile": { "priceSqm": number, "priceSqft": number },
+      "median": { "priceSqm": number, "priceSqft": number },
+      "upperQuartile": { "priceSqm": number, "priceSqft": number },
+      "adoptedAverage": { "priceSqm": number, "priceSqft": number },
+      "adoptedVsMedian": "e.g. -54%",
+      "adoptedVsMedianLabel": "CONSERVATIVE",
+      "discountReasons": ["reason 1", "reason 2", ...]
+    },
+    "perFlatValuations": [{ "flat", "floor", "beds", "giaSqm", "estimatedValue", "priceSqm" }],
+    "totalAggregateValue": number,
+    "unitRationale": [{ "flat", "value", "rationale": "detailed narrative citing specific comparables" }]
+  },
+  "comparableEvidence": {
+    "introText": "narrative about comparable selection criteria",
+    "comparables": [{ "address", "beds", "sqm", "price", "pricePerSqm", "date", "condition", "source" }],
+    "comparableAnalysis": [{ "address", "narrative": "detailed paragraph about this comparable" }],
+    "streetLevelData": [{ "street", "averagePriceSqm", "sampleSize" }],
+    "adoptedAverageForComparison": number,
+    "conclusion": "paragraph confirming evidence supports adopted valuations"
+  },
+  "propertyLayout": {
+    "description": "narrative about property layout",
+    "unitScheduleVerified": [{ "flat", "floor", "beds", "giaSqm", "giaSqft", "epcRating" }],
+    "minimumSizeCompliance": "bold statement about all units meeting 30 sqm threshold",
+    "leasePlanRequirements": ["bullet 1", "bullet 2", ...],
+    "planningPortalNote": "recommendation to check planning portal"
+  },
+  "demisedAreas": {
+    "parkingSpaces": [{ "space", "allocatedTo", "estimatedValueAdd": "range string" }],
+    "parkingNote": "narrative about parking value",
+    "gardens": [{ "area", "allocatedTo", "estimatedValueAdd": "range string" }],
+    "gardenRecommendation": "recommendation about garden allocation",
+    "commonParts": ["bullet list of common parts"],
+    "freeholdCompanyStructure": "narrative about SoF company setup"
+  },
+  "processNotes": {
+    "valuationAssumptions": ["assumption 1", "assumption 2", ...],
+    "specialAssumption": "narrative",
+    "reinstatementCostNote": "narrative with indicative range",
+    "bridgeFinanceRequirements": ["Day 1 LTV: ...", "Exit LTV: ...", ...],
+    "nextSteps": [{ "step": 1, "description": "..." }, ...],
+    "valuationSummaryRepeat": {
+      "asIsValue", "aggregateValue", "uplift", "upliftPercent",
+      "conservativeNote": "narrative about conservative approach"
+    },
+    "dataSources": "e.g. HM Land Registry, EPC Register, Housemetric.co.uk, Rightmove",
+    "disclaimer": "This memo is for internal use and to support formal valuation instruction"
+  }
+}
+
 Property address: ${listing.address.displayAddress}`;
 
   return prompt;
@@ -181,7 +242,7 @@ export async function generateValuationMemo(
 ): Promise<ValuationMemoData> {
   const userPrompt = buildUserPrompt(listing, evidence);
 
-  let response = await callClaude(SYSTEM_PROMPT, userPrompt, 10000);
+  let response = await callClaude(SYSTEM_PROMPT, userPrompt, 14000);
   let json = extractJson(response);
 
   try {
@@ -189,7 +250,7 @@ export async function generateValuationMemo(
   } catch (firstError) {
     try {
       const retryPrompt = `${userPrompt}\n\nPREVIOUS ATTEMPT FAILED TO PARSE. Error: ${firstError}. The response must be valid JSON only. Start with { and end with }.`;
-      response = await callClaude(SYSTEM_PROMPT, retryPrompt, 10000);
+      response = await callClaude(SYSTEM_PROMPT, retryPrompt, 14000);
       json = extractJson(response);
       return sanitizeValuationMemo(JSON.parse(json));
     } catch (retryError) {

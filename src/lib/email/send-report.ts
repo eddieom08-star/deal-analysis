@@ -12,7 +12,9 @@ interface SendReportParams {
   recommendation: string;
   keyMetrics: {
     purchasePrice: number;
-    splitGDV: number;
+    aggregateValue: number;
+    postRefurbGDV: number;
+    lenderLTV75: number;
     grossProfit: number;
     roi: number;
   };
@@ -70,8 +72,12 @@ export async function sendReportEmail(params: SendReportParams): Promise<void> {
           <td style="padding: 12px 0; border-bottom: 1px solid #e4e4e7; text-align: right; font-weight: 600; font-size: 14px;">${formatCurrency(keyMetrics.purchasePrice)}</td>
         </tr>
         <tr>
-          <td style="padding: 12px 0; border-bottom: 1px solid #e4e4e7; color: #71717a; font-size: 14px;">Split GDV</td>
-          <td style="padding: 12px 0; border-bottom: 1px solid #e4e4e7; text-align: right; font-weight: 600; font-size: 14px;">${formatCurrency(keyMetrics.splitGDV)}</td>
+          <td style="padding: 12px 0; border-bottom: 1px solid #e4e4e7; color: #71717a; font-size: 14px;">Aggregate Value (As-Is)</td>
+          <td style="padding: 12px 0; border-bottom: 1px solid #e4e4e7; text-align: right; font-weight: 600; font-size: 14px;">${formatCurrency(keyMetrics.aggregateValue)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 12px 0; border-bottom: 1px solid #e4e4e7; color: #71717a; font-size: 14px;">Post-Refurb GDV</td>
+          <td style="padding: 12px 0; border-bottom: 1px solid #e4e4e7; text-align: right; font-weight: 600; font-size: 14px;">${formatCurrency(keyMetrics.postRefurbGDV)}</td>
         </tr>
         <tr>
           <td style="padding: 12px 0; border-bottom: 1px solid #e4e4e7; color: #71717a; font-size: 14px;">Gross Profit</td>

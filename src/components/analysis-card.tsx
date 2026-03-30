@@ -2,7 +2,8 @@ import type { AnalysisRecord } from "@/lib/types";
 import { formatDistanceToNow } from "date-fns";
 import { DeleteAnalysisButton } from "./delete-analysis-button";
 
-function fmtCurrency(amount: number): string {
+function fmtCurrency(amount: number | null | undefined): string {
+  if (amount == null) return "N/A";
   return `£${amount.toLocaleString("en-GB")}`;
 }
 
@@ -13,7 +14,7 @@ export function AnalysisCard({ analysis }: { analysis: AnalysisRecord }) {
 
   const address =
     analysis.listing?.address.displayAddress ||
-    analysis.input.rightmoveUrl.split("/").pop() ||
+    analysis.input.listingUrl.split("/").pop() ||
     "Processing...";
 
   const rec = analysis.investmentMemo?.recommendation;
@@ -75,13 +76,13 @@ export function AnalysisCard({ analysis }: { analysis: AnalysisRecord }) {
             <div>
               <span className="text-zinc-500">ROI </span>
               <span className="font-medium">
-                {analysis.investmentMemo.keyMetrics.roi.toFixed(1)}%
+                {analysis.investmentMemo.keyMetrics.roi?.toFixed(1) ?? "N/A"}%
               </span>
             </div>
             <div>
               <span className="text-zinc-500">GDV </span>
               <span className="font-medium">
-                {fmtCurrency(analysis.investmentMemo.keyMetrics.splitGDV)}
+                {fmtCurrency(analysis.investmentMemo.keyMetrics.postRefurbGDV)}
               </span>
             </div>
           </div>

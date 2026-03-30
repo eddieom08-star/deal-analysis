@@ -140,7 +140,7 @@ describe('POST /api/auth/verify', () => {
       const response = await POST(request);
 
       expect(response.status).toBe(200);
-      expect(mockVerifyCode).toHaveBeenCalledWith('eddieom08@gmail.com', '123456');
+      expect(mockVerifyCode).toHaveBeenCalledWith('eddieom08@gmail.com', '123456', undefined);
     });
 
     it('should trim whitespace from inputs', async () => {
@@ -154,7 +154,7 @@ describe('POST /api/auth/verify', () => {
       const response = await POST(request);
 
       expect(response.status).toBe(200);
-      expect(mockVerifyCode).toHaveBeenCalledWith('eddieom08@gmail.com', '123456');
+      expect(mockVerifyCode).toHaveBeenCalledWith('eddieom08@gmail.com', '123456', undefined);
     });
   });
 
@@ -172,7 +172,7 @@ describe('POST /api/auth/verify', () => {
 
       expect(response.status).toBe(200);
       expect(data.ok).toBe(true);
-      expect(mockVerifyCode).toHaveBeenCalledWith(TEST_EMAIL, '123456');
+      expect(mockVerifyCode).toHaveBeenCalledWith(TEST_EMAIL, '123456', undefined);
     });
 
     it('should reject invalid code', async () => {

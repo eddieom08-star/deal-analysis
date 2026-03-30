@@ -14,12 +14,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid code" }, { status: 401 });
   }
 
-  // Get verify token from cookie
+  // Get verify token from cookie (use substring to avoid splitting on '=' in token value)
   const cookies = request.headers.get('cookie') || '';
-  const verifyToken = cookies
+  const verifyTokenCookie = cookies
     .split(';')
-    .find(c => c.trim().startsWith('da_verify_token='))
-    ?.split('=')[1];
+    .find(c => c.trim().startsWith('da_verify_token='));
+  const verifyToken = verifyTokenCookie
+    ? verifyTokenCookie.trim().substring('da_verify_token='.length)
+    : undefined;
 
   if (!(await verifyCode(email, code, verifyToken))) {
     return NextResponse.json({ error: "Invalid or expired code" }, { status: 401 });

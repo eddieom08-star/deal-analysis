@@ -29,7 +29,12 @@ class MockSignJWT {
     return this;
   }
 
-  setExpirationTime(exp: string): this {
+  setExpirationTime(exp: string | number): this {
+    if (typeof exp === 'number') {
+      // Unix timestamp (seconds)
+      this.payload.exp = exp;
+      return this;
+    }
     // Parse expiration time (e.g., "7d")
     const match = exp.match(/^(\d+)([dhms])$/);
     if (match) {

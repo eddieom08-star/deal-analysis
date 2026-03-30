@@ -19,7 +19,9 @@ interface StatusData {
     recommendation: string;
     keyMetrics: {
       purchasePrice: number;
-      splitGDV: number;
+      aggregateValue: number;
+      postRefurbGDV: number;
+      lenderLTV75: number;
       grossProfit: number;
       roi: number;
     };
@@ -53,7 +55,8 @@ const STEP_ORDER = [
   "complete",
 ];
 
-function fmtCurrency(amount: number): string {
+function fmtCurrency(amount: number | null | undefined): string {
+  if (amount == null) return "N/A";
   return `£${amount.toLocaleString("en-GB")}`;
 }
 
@@ -198,9 +201,9 @@ export function StatusTracker({ analysisId }: { analysisId: string }) {
                 </p>
               </div>
               <div>
-                <p className="text-xs text-zinc-500">Split GDV</p>
+                <p className="text-xs text-zinc-500">Post-Refurb GDV</p>
                 <p className="text-lg font-semibold">
-                  {fmtCurrency(data.investmentMemo.keyMetrics.splitGDV)}
+                  {fmtCurrency(data.investmentMemo.keyMetrics.postRefurbGDV)}
                 </p>
               </div>
               <div>

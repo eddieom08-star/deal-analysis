@@ -38,10 +38,22 @@ export default function GatePage() {
     setLoading(true);
     setError("");
 
+    // Read code directly from the input element to avoid stale React state
+    // during paste/autofill where the form submits before setState commits
+    const form = e.target as HTMLFormElement;
+    const codeInput = form.querySelector<HTMLInputElement>('input[inputmode="numeric"]');
+    const currentCode = codeInput?.value.replace(/\D/g, "").slice(0, 6) || code;
+
+    if (currentCode.length !== 6) {
+      setLoading(false);
+      setError("Enter all 6 digits");
+      return;
+    }
+
     const res = await fetch("/api/auth/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, code }),
+      body: JSON.stringify({ email, code: currentCode }),
     });
 
     setLoading(false);
@@ -90,6 +102,7 @@ export default function GatePage() {
               <input
                 type="text"
                 inputMode="numeric"
+                autoComplete="one-time-code"
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 placeholder="000000"

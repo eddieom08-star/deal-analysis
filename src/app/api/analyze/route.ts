@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { rightmoveUrl, userNotes, reportEmail } = parsed.data;
+  const { listingUrl, userNotes, reportEmail } = parsed.data;
   const id = nanoid(12);
 
   const analysis: AnalysisRecord = {
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     input: {
-      rightmoveUrl,
+      listingUrl,
       userNotes: userNotes || "",
       reportEmail: reportEmail || process.env.REPORT_EMAIL || "",
     },

@@ -210,52 +210,64 @@ export interface UnitScheduleEntry {
   giaSqm: number;
   giaSqft: number;
   epc: string;
-  meetsMinSize: boolean;
+  meetsMinSize: boolean | string; // true/false or "CHECK"/"UNVERIFIED"
+  currentRent: string;
 }
 
 export interface ScreeningCriteria {
   criterion: string;
   requirement: string;
-  status: "PASS" | "FAIL";
+  status: "PASS" | "FAIL" | "UNVERIFIED" | "LIKELY_PASS";
+  confidence: string; // "LOW" | "MEDIUM" | "HIGH"
 }
 
 export interface CostItem {
   item: string;
   amount: number;
-}
-
-export interface ExitValuation {
-  flat: string;
-  sqm: number;
-  beds: number;
-  pricePerSqm: number;
-  value: number;
-  salesCosts: number;
-  netValue: number;
+  notes: string;
 }
 
 export interface RiskEntry {
   risk: string;
-  likelihood: "L" | "M" | "H";
-  impact: "L" | "M" | "H";
+  likelihood: "LOW" | "MEDIUM" | "HIGH" | "CERTAIN";
+  impact: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   mitigation: string;
 }
 
 export interface TimelineEntry {
   week: string;
   activity: string;
+  status: string;
+}
+
+export interface ScenarioReturn {
+  totalGDV: number;
+  totalInvestment: number;
+  salesCosts: number;
+  netProceeds: number;
+  grossProfit: number;
+  profitMargin: number;
+  roi: number;
+  profitPerUnit: number;
+  holdPeriodMonths: string;
+  annualisedRoi: number;
 }
 
 export interface InvestmentMemoData {
   propertyAddress: string;
   analysisDate: string;
+
   keyMetrics: {
     purchasePrice: number;
-    splitGDV: number;
+    aggregateValue: number; // Value Creation Step 1 as-is moderate
+    postRefurbGDV: number; // Value Creation Step 2 post-refurb moderate
     lenderLTV75: number;
-    grossProfit: number;
-    roi: number;
+    grossProfit: number; // moderate scenario
+    roi: number; // moderate scenario
   };
+
+  criticalNote: string; // e.g. "This is Wales – LTT applies, NOT SDLT..."
+
   recommendation: "PROCEED" | "PROCEED_WITH_CONDITIONS" | "REJECT";
   recommendationRationale: string;
 
@@ -263,64 +275,113 @@ export interface InvestmentMemoData {
   screening: {
     overview: {
       address: string;
-      listingPrice: number;
-      numberOfFlats: number;
-      totalGiaSqm: number;
-      totalGiaSqft: number;
+      listingPrice: string; // formatted e.g. "£485,000 (Guide Price)"
+      numberOfFlats: string; // e.g. "4 (2 x 2-bed, 2 x 1-bed)"
+      totalGia: string; // e.g. "~166 sqm (~1,787 sq ft)"
       buildingType: string;
       construction: string;
       listedStatus: string;
       tenure: string;
       currentCondition: string;
       vacancyStatus: string;
+      currentYield: string;
       epcRatings: string;
       councilTaxBands: string;
       locationNotes: string;
+      agent: string;
+      listedDate: string;
     };
     mandatoryCriteria: ScreeningCriteria[];
+    criticalNote: string; // screening-specific critical note
     unitSchedule: UnitScheduleEntry[];
+    unitScheduleSummary: string; // e.g. "Total flats: 4 | Flats likely >=30 sqm: 2..."
   };
 
   // Section 2: Financial Analysis
   financial: {
+    // Value Creation Step 1: Title Split (As-Is Aggregate Value)
+    valueCreationStep1: {
+      title: string;
+      description: string;
+      perUnit: Array<{
+        flat: string;
+        sqm: number;
+        beds: number;
+        conservativePriceSqm: number;
+        moderatePriceSqm: number;
+        aggressivePriceSqm: number;
+        asIsValue: number; // moderate
+      }>;
+      totals: { conservative: number; moderate: number; aggressive: number };
+      blockDiscountNote: string;
+    };
+
+    // Value Creation Step 2: Post-Refurbishment GDV
+    valueCreationStep2: {
+      title: string;
+      description: string;
+      perUnit: Array<{
+        flat: string;
+        sqm: number;
+        conservativeGDV: number;
+        moderateGDV: number;
+        aggressiveGDV: number;
+        priceSqmMod: number;
+      }>;
+      totals: { conservative: number; moderate: number; aggressive: number };
+    };
+
+    // Costs
     acquisitionCosts: CostItem[];
     totalAcquisition: number;
     splittingCosts: CostItem[];
     totalSplitting: number;
     refurbishmentCosts: CostItem[];
     totalRefurbishment: number;
-    totalProjectCost: number;
-    financeCosts: number;
-    holdingCosts: number;
-    exitValuations: ExitValuation[];
-    totalGrossSalesValue: number;
-    totalSalesCosts: number;
-    totalNetProceeds: number;
-    returns: {
-      totalInvestment: number;
-      grossSalesValue: number;
-      salesCosts: number;
-      netProceeds: number;
-      grossProfit: number;
-      profitMargin: number;
-      roi: number;
-      profitPerUnit: number;
-      holdPeriodMonths: number;
-      annualisedRoi: number;
+    financeCosts: CostItem[];
+    totalFinanceAndHolding: number;
+    totalProjectInvestment: number;
+
+    // Tax breakdown
+    taxBreakdown: {
+      taxType: string; // "SDLT" or "LTT"
+      effectiveRate: string;
+      bands: Array<{
+        band: string;
+        rate: string;
+        taxableAmount: number;
+        taxDue: number;
+        cumulative: number;
+      }>;
+      totalTax: number;
     };
-    stressedReturns: {
-      totalInvestment: number;
-      grossSalesValue: number;
-      salesCosts: number;
-      netProceeds: number;
-      grossProfit: number;
-      profitMargin: number;
-      roi: number;
+
+    // Scenario Returns
+    scenarioReturns: {
+      conservative: ScenarioReturn;
+      moderate: ScenarioReturn;
+      aggressive: ScenarioReturn;
     };
+
+    // Stress Test: GDV -10%
+    stressTest: {
+      conservative: ScenarioReturn;
+      moderate: ScenarioReturn;
+      aggressive: ScenarioReturn;
+    };
+
+    // Max purchase price for target ROI
+    maxPurchaseForTargetROI: Array<{
+      scenario: string;
+      gdv: number;
+      maxPurchasePrice: number;
+    }>;
+    maxPurchaseNote: string;
   };
 
   // Section 3: Comparable Evidence
   comparables: {
+    description: string; // intro text about sources
     individualFlatSales: Array<{
       address: string;
       type: string;
@@ -331,12 +392,25 @@ export interface InvestmentMemoData {
       date: string;
       source: string;
     }>;
+    comparableNote: string; // note about estimated vs verified sqm
+    housemetricBaseline: {
+      source: string;
+      sampleSize: number;
+      period: string;
+      lowerQuartile: number;
+      median: number;
+      upperQuartile: number;
+      subjectStreetAvg: number | null;
+      note: string;
+    };
     blockDiscount: {
-      sumOfIndividualValues: number;
-      typicalBlockDiscount: string;
-      impliedWholeBlockValue: number;
-      acquisitionPriceInclCosts: number;
-      discountAchieved: number;
+      sumAsIsModerate: number;
+      sumPostRefurbModerate: number;
+      acquisitionPrice: number;
+      discountVsAsIs: number;
+      discountVsPostRefurb: number;
+      typicalRange: string;
+      note: string;
     };
   };
 
@@ -345,13 +419,14 @@ export interface InvestmentMemoData {
     matrix: RiskEntry[];
     redFlags: Array<{
       flag: string;
-      triggered: boolean;
+      status: string; // e.g. "UNVERIFIED – Obtain EPCs", "N/A if freehold", etc.
     }>;
   };
 
   // Section 5: Implementation Plan
   implementation: {
-    exitStrategy: "RETAINED_FREEHOLD" | "SHARE_OF_FREEHOLD" | "HYBRID";
+    exitStrategy: string;
+    exitStrategyLabel: string; // e.g. "Option B: Share of Freehold Sale (RECOMMENDED)"
     exitStrategyRationale: string;
     timeline: TimelineEntry[];
     professionalTeam: Array<{
@@ -365,10 +440,12 @@ export interface InvestmentMemoData {
     criteria: Array<{
       requirement: string;
       target: string;
-      status: "PASS" | "FAIL";
+      status: string; // flexible: "PASS", "FAIL", "UNVERIFIED", "LIKELY", or specific like "15.3% (Mod)"
+      confidence: string;
     }>;
     decision: "PROCEED" | "PROCEED_WITH_CONDITIONS" | "REJECT";
-    conditions: string;
+    conditions: string[];
+    analystNote: string; // e.g. "Analyst: Claude AI | Date: ... | Confidence Level: ..."
   };
 }
 
@@ -376,6 +453,8 @@ export interface InvestmentMemoData {
 
 export interface ValuationMemoData {
   propertyAddress: string;
+  propertyName: string; // e.g. "West End House"
+  propertySubtitle: string; // e.g. "Freehold Block of 6 Self-Contained Flats"
   analysisDate: string;
 
   // A: Headline Valuation & Summary
@@ -385,51 +464,99 @@ export interface ValuationMemoData {
     uplift: number;
     upliftPercent: number;
     valuationBasis: string;
-    specialAssumption: string;
-    day180Value: number | null;
-    day90Value: number | null;
+    aggregateValueBasis: string;
+    valuationDateContext: {
+      valuationDate: string;
+      day90Value: string | null; // range like "£355,000 - £365,000"
+      day180Value: string | null;
+      marketEvidencePeriod: string;
+      transactionSampleSize: string;
+    };
+    propertySummary: {
+      address: string;
+      propertyType: string;
+      tenure: string;
+      numberOfUnits: string;
+      totalFloorArea: string;
+      construction: string;
+      heating: string;
+      epcRatings: string;
+      condition: string;
+      parking: string;
+      gardens: string;
+    };
   };
 
   // B: Valuation Logic / Calculations
   valuationLogic: {
+    introText: string;
+    marketRateSummary: {
+      source: string;
+      sampleDescription: string;
+      lowerQuartile: { priceSqm: number; priceSqft: number };
+      median: { priceSqm: number; priceSqft: number };
+      upperQuartile: { priceSqm: number; priceSqft: number };
+      adoptedAverage: { priceSqm: number; priceSqft: number };
+      adoptedVsMedian: string; // e.g. "-54%"
+      adoptedVsMedianLabel: string; // e.g. "CONSERVATIVE"
+      discountReasons: string[];
+    };
     perFlatValuations: Array<{
       flat: string;
-      sqm: number;
-      sqft: number;
-      pricePerSqft: number;
+      floor: string;
+      beds: number;
+      giaSqm: number;
       estimatedValue: number;
-      basis: string;
-      premiums: string;
+      priceSqm: number;
     }>;
     totalAggregateValue: number;
-    areaAveragePricePerSqft: number;
-    proposedPricePerSqftVsAverage: string;
+    unitRationale: Array<{
+      flat: string;
+      value: number;
+      rationale: string;
+    }>;
   };
 
   // C: Local Comparable Evidence
   comparableEvidence: {
+    introText: string;
     comparables: Array<{
       address: string;
-      propertyType: string;
       beds: number;
-      salePrice: number;
-      saleDate: string;
-      pricePerSqft: number;
-      distanceApprox: string;
-      specialNotes: string;
+      sqm: number;
+      price: number;
+      pricePerSqm: number;
+      date: string;
+      condition: string;
       source: string;
     }>;
-    averagePricePerSqft: number;
-    medianPricePerSqft: number;
-    proposedVsAverage: string;
+    comparableAnalysis: Array<{
+      address: string;
+      narrative: string;
+    }>;
+    streetLevelData: Array<{
+      street: string;
+      averagePriceSqm: number;
+      sampleSize: string;
+    }>;
+    adoptedAverageForComparison: number;
+    conclusion: string;
   };
 
   // D: Property Layout / Plans
   propertyLayout: {
-    hasExistingPlans: boolean;
-    planSource: string;
-    proposedDemiseNotes: string;
-    floorplanUrls: string[];
+    description: string;
+    unitScheduleVerified: Array<{
+      flat: string;
+      floor: string;
+      beds: number;
+      giaSqm: number;
+      giaSqft: number;
+      epcRating: string;
+    }>;
+    minimumSizeCompliance: string;
+    leasePlanRequirements: string[];
+    planningPortalNote: string;
   };
 
   // E: Demised Areas that Drive Value
@@ -437,23 +564,38 @@ export interface ValuationMemoData {
     parkingSpaces: Array<{
       space: string;
       allocatedTo: string;
-      estimatedValueAdd: number;
+      estimatedValueAdd: string; // range like "+£5,000 - £10,000"
     }>;
+    parkingNote: string;
     gardens: Array<{
       area: string;
       allocatedTo: string;
-      estimatedValueAdd: number;
+      estimatedValueAdd: string;
     }>;
-    totalValueFromDemisedAreas: number;
+    gardenRecommendation: string;
+    commonParts: string[];
+    freeholdCompanyStructure: string;
   };
 
   // F: Practical / Process Notes
   processNotes: {
+    valuationAssumptions: string[];
     specialAssumption: string;
-    exitStrategy: string;
     reinstatementCostNote: string;
-    insuranceNote: string;
-    additionalNotes: string;
+    bridgeFinanceRequirements: string[];
+    nextSteps: Array<{
+      step: number;
+      description: string;
+    }>;
+    valuationSummaryRepeat: {
+      asIsValue: number;
+      aggregateValue: number;
+      uplift: number;
+      upliftPercent: number;
+      conservativeNote: string;
+    };
+    dataSources: string;
+    disclaimer: string;
   };
 }
 
@@ -465,7 +607,7 @@ export interface AnalysisRecord {
   createdAt: string;
   updatedAt: string;
   input: {
-    rightmoveUrl: string;
+    listingUrl: string;
     userNotes: string;
     reportEmail: string;
   };
@@ -490,13 +632,12 @@ export interface AnalysisRecord {
 
 // ─── Zod Schemas for Runtime Validation ─────────────────────────────────────
 
-export const rightmoveUrlSchema = z.string().url().regex(
-  /rightmove\.co\.uk\/properties\/\d+/,
-  "Must be a valid Rightmove property URL"
+export const listingUrlSchema = z.string().url(
+  "Must be a valid property listing URL"
 );
 
 export const submitAnalysisSchema = z.object({
-  rightmoveUrl: rightmoveUrlSchema,
+  listingUrl: listingUrlSchema,
   userNotes: z.string().max(5000).optional().default(""),
   reportEmail: z.email().optional(),
 });
