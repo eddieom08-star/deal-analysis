@@ -12,9 +12,12 @@ export function AnalysisCard({ analysis }: { analysis: AnalysisRecord }) {
   const isFailed = analysis.status === "failed";
   const isProcessing = !isComplete && !isFailed;
 
+  const rawUrl = (analysis.input as Record<string, string>).listingUrl
+    || (analysis.input as Record<string, string>).rightmoveUrl
+    || "";
   const address =
     analysis.listing?.address.displayAddress ||
-    analysis.input.listingUrl.split("/").pop() ||
+    rawUrl.split("/").pop() ||
     "Processing...";
 
   const rec = analysis.investmentMemo?.recommendation;
