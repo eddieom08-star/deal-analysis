@@ -10,7 +10,7 @@ const BASE_URL = "https://api.propertydata.co.uk";
 
 function apiKey(): string {
   const key = process.env.PROPERTY_DATA_API_KEY;
-  if (!key) throw new Error("PROPERTY_DATA_API_KEY not configured");
+  if (!key) throw new Error("PropertyData skipped: PROPERTY_DATA_API_KEY not configured");
   return key;
 }
 

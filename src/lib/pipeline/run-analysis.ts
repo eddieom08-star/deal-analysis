@@ -126,32 +126,39 @@ export async function runAnalysisPipeline(analysis: AnalysisRecord): Promise<voi
       analysis = updateStatus(analysis, AnalysisStatus.FETCHING_DATA);
       await saveAnalysis(analysis);
 
-      const [soldPricesResult, sqftResult, lrTransactions, epcCerts] = await Promise.allSettled([
-        getSoldPrices(postcode, { type: "flat", maxAge: 18 }),
-        getSoldPricesPerSqft(postcode, { type: "flat", maxAge: 18 }),
-        getTransactionsByPostcode(postcode, { maxAgeMonths: 18, propertyType: "flat" }),
-        searchByPostcode(postcode),
-      ]);
-
-      soldPrices = soldPricesResult.status === "fulfilled" ? soldPricesResult.value : null;
-      sqftData = sqftResult.status === "fulfilled" ? sqftResult.value : null;
-      landRegistry = lrTransactions.status === "fulfilled" ? lrTransactions.value : [];
-      epcData = epcCerts.status === "fulfilled" ? epcCerts.value : [];
-
-      // Store warnings if any API failed
       const warnings: string[] = [];
-      if (soldPricesResult.status === "rejected") {
-        warnings.push(`PropertyData sold prices unavailable: ${soldPricesResult.reason.message}`);
+
+      if (!postcode || postcode.trim().length < 3) {
+        // No valid postcode — skip all postcode-based API calls
+        warnings.push("No valid postcode extracted from listing - skipping external data APIs. Analysis will use listing data only.");
+        console.warn(`[pipeline] No postcode for ${listing.address.displayAddress} — skipping API calls`);
+      } else {
+        const [soldPricesResult, sqftResult, lrTransactions, epcCerts] = await Promise.allSettled([
+          getSoldPrices(postcode, { type: "flat", maxAge: 18 }),
+          getSoldPricesPerSqft(postcode, { type: "flat", maxAge: 18 }),
+          getTransactionsByPostcode(postcode, { maxAgeMonths: 18, propertyType: "flat" }),
+          searchByPostcode(postcode),
+        ]);
+
+        soldPrices = soldPricesResult.status === "fulfilled" ? soldPricesResult.value : null;
+        sqftData = sqftResult.status === "fulfilled" ? sqftResult.value : null;
+        landRegistry = lrTransactions.status === "fulfilled" ? lrTransactions.value : [];
+        epcData = epcCerts.status === "fulfilled" ? epcCerts.value : [];
+
+        if (soldPricesResult.status === "rejected") {
+          warnings.push(`PropertyData sold prices unavailable: ${soldPricesResult.reason?.message || "unknown error"}`);
+        }
+        if (sqftResult.status === "rejected") {
+          warnings.push(`PropertyData sqft data unavailable: ${sqftResult.reason?.message || "unknown error"}`);
+        }
+        if (lrTransactions.status === "rejected") {
+          warnings.push(`Land Registry data unavailable: ${lrTransactions.reason?.message || "unknown error"}`);
+        }
+        if (epcCerts.status === "rejected") {
+          warnings.push(`EPC data unavailable: ${epcCerts.reason?.message || "unknown error"}`);
+        }
       }
-      if (sqftResult.status === "rejected") {
-        warnings.push(`PropertyData sqft data unavailable: ${sqftResult.reason.message}`);
-      }
-      if (lrTransactions.status === "rejected") {
-        warnings.push(`Land Registry data unavailable: ${lrTransactions.reason.message}`);
-      }
-      if (epcCerts.status === "rejected") {
-        warnings.push(`EPC data unavailable: ${epcCerts.reason.message}`);
-      }
+
       analysis.partialDataWarnings = warnings.length > 0 ? warnings : undefined;
       analysis.lastCompletedStep = AnalysisStatus.FETCHING_DATA;
       await saveAnalysis(analysis);
@@ -327,6 +334,7 @@ export async function runAnalysisPipeline(analysis: AnalysisRecord): Promise<voi
     // Categorize error as retryable or not
     const isRetryable = errorMessage.toLowerCase().includes('timeout') ||
                         errorMessage.toLowerCase().includes('network') ||
+                        errorMessage.toLowerCase().includes('insufficient_data') ||
                         errorMessage.toLowerCase().includes('429') ||
                         errorMessage.toLowerCase().includes('500') ||
                         errorMessage.toLowerCase().includes('502') ||
